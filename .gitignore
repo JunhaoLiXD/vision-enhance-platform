@@ -1,0 +1,24 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# ===== Environments =====
+.venv/
+venv/
+.env/
+
+# ===== Conda =====
+.conda/
+conda-meta/
+
+# ===== VS Code =====
+.vscode/
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+
+# ===== Runtime data =====
+workspaces/
