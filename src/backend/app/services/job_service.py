@@ -1,4 +1,10 @@
 from __future__ import annotations
+import numpy as np
+from PIL import Image
+
+from src.backend.engine.core.image_frame import ImageFrame
+from src.backend.engine.core.pipeline import run_pipeline
+from src.backend.engine.plugins.enhance_classical.registry import build_registry
 
 import uuid
 from pathlib import Path
@@ -23,13 +29,29 @@ def create_job(file: UploadFile) -> Dict[str, Any]:
     filename = file.filename or "input.bin"
     input_path = ws.input_dir / filename
 
+    # Mark job as created/uploading
+    status = update_status(
+        ws.status_path,
+        {
+            "status": "uploading",
+            "input_filename": filename,
+        },
+    )
+
     # Read/Write in chunks (safer for large files)
-    with input_path.open("wb") as f:
-        while True:
-            chunk = file.file.read(1024 * 1024)
-            if not chunk:
-                break
-            f.write(chunk)
+    try:
+        with input_path.open("wb") as f:
+            while True:
+                chunk = file.file.read(1024 * 1024)  # 1MB per read
+                if not chunk:
+                    break
+                f.write(chunk)
+    finally:
+        # Close the underlying upload stream
+        try:
+            file.file.close()
+        except Exception:
+            pass
 
     status = update_status(
         ws.status_path,
@@ -39,7 +61,49 @@ def create_job(file: UploadFile) -> Dict[str, Any]:
             "input_path": str(input_path.as_posix()),
         },
     )
-    return {"job_id": job_id, "status": status}
+
+    try:
+        img = Image.open(input_path).convert("RGB")
+        arr = np.asarray(img).astype(np.float32) / 255.0  # normalize to [0,1]
+
+        frame = ImageFrame(data=arr, meta={"mode": "RGB"})
+        registry = build_registry()
+
+        spec = [
+            {"name": "gamma", "params": {"gamma": 1.2}},
+            {"name": "clahe", "params": {"clip_limit": 2.0, "tile_grid_size": [8, 8]}},
+        ]
+        out_frame = run_pipeline(frame, spec, registry)
+
+        out_img = (np.clip(out_frame.data, 0.0, 1.0) * 255.0).astype(np.uint8)
+        out_pil = Image.fromarray(out_img, mode="RGB")
+
+        out_name = f"enhanced_{filename.rsplit('.', 1)[0]}.png"
+        out_path = ws.output_dir / out_name
+        out_pil.save(out_path)
+
+        status = update_status(
+            ws.status_path,
+            {
+                "status": "done",
+                "output_filename": out_name,
+                "output_path": str(out_path.as_posix()),
+                "output_download_url": f"/api/jobs/{job_id}/download/{out_name}",
+                "pipeline": spec,
+            },
+        )
+
+        return {"job_id": job_id, "status": status}
+    
+    except Exception as e:
+        status = update_status(
+            ws.status_path,
+            {
+                "status": "failed",
+                "error": str(e),
+            },
+        )
+        return {"job_id": job_id, "status": status}
 
 
 def get_job_status(job_id: str) -> Dict[str, Any]:
