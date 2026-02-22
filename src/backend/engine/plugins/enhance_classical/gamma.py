@@ -1,3 +1,15 @@
+"""
+Gamma correction enhancement step.
+
+Responsibilities:
+- Implement gamma-based brightness adjustment.
+- Accept parameters controlling gamma behavior.
+- Return a new ImageFrame after transformation.
+
+Notes:
+- Performs pure computation.
+- Does NOT interact with file system or API layers.
+"""
 from __future__ import annotations
 
 from typing import Any, Dict

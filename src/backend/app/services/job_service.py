@@ -1,3 +1,18 @@
+"""
+Business service layer for managing enhancement jobs.
+
+Responsibilities:
+- Create and initialize new jobs.
+- Generate unique job identifiers.
+- Coordinate workspace creation and input storage.
+- Construct and execute processing pipelines.
+- Update job status and manifest metadata.
+- Provide job status and artifact retrieval logic.
+
+Notes:
+- Acts as the orchestration layer between API, storage, and engine.
+- Does NOT implement algorithm logic.
+"""
 from __future__ import annotations
 import numpy as np
 from PIL import Image

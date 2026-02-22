@@ -1,3 +1,16 @@
+"""
+Workspace and file system management for enhancement jobs.
+
+Responsibilities:
+- Create and manage job-specific workspace directories.
+- Store input images and generated outputs.
+- Maintain status.json and manifest.json metadata files.
+- Provide helper methods for reading/writing job artifacts.
+
+Notes:
+- Responsible only for persistence and file management.
+- Does NOT perform image processing.
+"""
 from __future__ import annotations
 
 import json

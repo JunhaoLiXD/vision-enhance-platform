@@ -1,3 +1,15 @@
+"""
+Unified internal image representation.
+
+Responsibilities:
+- Wrap raw image data into a consistent ImageFrame object.
+- Standardize internal dtype (typically float32).
+- Store image metadata and processing history.
+- Serve as the common data structure passed between processing steps.
+
+Notes:
+- Ensures decoupling between pipeline logic and raw NumPy arrays.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field

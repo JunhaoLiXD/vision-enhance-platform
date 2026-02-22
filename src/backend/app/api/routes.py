@@ -1,3 +1,16 @@
+"""
+API routing layer for the Vision Enhance Platform.
+
+Responsibilities:
+- Define HTTP endpoints under /api.
+- Parse incoming requests (file uploads, JSON bodies, query parameters).
+- Delegate business logic to the service layer.
+- Return structured HTTP responses.
+
+Notes:
+- Does NOT implement image processing logic.
+- Does NOT directly manage file system operations.
+"""
 from fastapi import APIRouter, UploadFile, File
 from fastapi.responses import FileResponse
 from fastapi import HTTPException

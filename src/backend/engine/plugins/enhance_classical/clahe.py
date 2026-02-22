@@ -1,3 +1,15 @@
+"""
+CLAHE (Contrast Limited Adaptive Histogram Equalization) enhancement step.
+
+Responsibilities:
+- Perform adaptive contrast enhancement.
+- Typically operate on luminance channel (e.g., LAB color space).
+- Return a new ImageFrame after enhancement.
+
+Notes:
+- Implements classical image processing logic only.
+- No file or HTTP operations.
+"""
 from __future__ import annotations
 
 from typing import Any, Dict, Tuple

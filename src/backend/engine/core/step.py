@@ -1,3 +1,14 @@
+"""
+Abstract processing step definition.
+
+Responsibilities:
+- Define the interface that all processing steps must implement.
+- Enforce a standard method signature (e.g., run(ImageFrame) -> ImageFrame).
+- Enable pipeline execution to treat all algorithms uniformly.
+
+Notes:
+- Concrete algorithm implementations live in plugin modules.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass

@@ -1,3 +1,16 @@
+"""
+Processing pipeline execution engine.
+
+Responsibilities:
+- Construct processing steps based on job specifications.
+- Retrieve algorithm implementations from plugin registries.
+- Execute processing steps sequentially.
+- Optionally record step timing and metadata.
+
+Notes:
+- Does NOT handle HTTP logic.
+- Does NOT manage file persistence directly.
+"""
 from __future__ import annotations
 
 from typing import Any, Dict, List
