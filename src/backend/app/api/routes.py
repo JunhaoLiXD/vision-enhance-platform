@@ -46,6 +46,25 @@ def api_algorithms():
                 "tile_grid_size": {"type": "list[int,int]", "default": [8, 8]},
             },
         },
+        "retinex_msr_luma":{
+            "description": "Multi-scale Retinex applied on luminance channel (YCrCb)",
+            "params": {
+                "sigmas": {
+                    "type": "list[float]",
+                    "default": [15.0, 80.0, 250.0]
+                },
+                "weights": {
+                    "type": "list[float]",
+                    "default": None
+                },
+                "eps": {
+                    "type": "float",
+                    "default": 1e-6,
+                    "min": 1e-8,
+                    "max": 1e-2
+                },
+            },
+        },
     }
 
 
