@@ -27,7 +27,7 @@ from typing import Dict, Any
 
 from fastapi import UploadFile
 
-from src.backend.app.storage.workspace import create_workspace, update_status, read_json
+from src.backend.app.storage.workspace import create_workspace, update_status, read_json, write_json
 
 
 WORKSPACES_DIR = Path("workspaces")
@@ -89,7 +89,7 @@ def create_job(file: UploadFile) -> Dict[str, Any]:
             {"name": "clahe", "params": {"clip_limit": 2.0, "tile_grid_size": [8, 8]}},
             {"name": "retinex_msr_luma", "params":{"sigmas": [15.0, 80.0, 250.0], "weights": None, "eps": 1e-6}},
         ]
-        out_frame = run_pipeline(frame, spec, registry)
+        out_frame, report = run_pipeline(frame, spec, registry)
 
         out_img = (np.clip(out_frame.data, 0.0, 1.0) * 255.0).astype(np.uint8)
         out_pil = Image.fromarray(out_img, mode="RGB")
@@ -98,6 +98,23 @@ def create_job(file: UploadFile) -> Dict[str, Any]:
         out_path = ws.output_dir / out_name
         out_pil.save(out_path)
 
+        manifest = {
+            "job_id": job_id,
+            "input": {
+                "filename": filename,
+                "path": str(input_path.as_posix()),
+            },
+            "output": {
+                "filename": out_name,
+                "path": str(out_path.as_posix()),
+                "download_url": f"/api/jobs/{job_id}/download/{out_name}",
+            },
+            "pipeline": spec,
+            "timing": report,  # report = {"steps":[...], "total_time_sec": ...}
+        }
+
+        write_json(ws.manifest_path, manifest)
+
         status = update_status(
             ws.status_path,
             {
@@ -105,6 +122,7 @@ def create_job(file: UploadFile) -> Dict[str, Any]:
                 "output_filename": out_name,
                 "output_path": str(out_path.as_posix()),
                 "output_download_url": f"/api/jobs/{job_id}/download/{out_name}",
+                "manifest_path": str(ws.manifest_path.as_posix()),
                 "pipeline": spec,
             },
         )

@@ -13,13 +13,18 @@ Notes:
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
+import time
 
 from src.backend.engine.core.image_frame import ImageFrame
 
 
-def run_pipeline(frame: ImageFrame, spec: List[Dict[str, Any]], registry: Dict[str, object]) -> ImageFrame:
+def run_pipeline(frame: ImageFrame, spec: List[Dict[str, Any]], registry: Dict[str, object]) -> Tuple[ImageFrame, Dict[str, Any]]:
     cur = frame
+    steps_report: List[Dict[str, Any]] = []
+
+    t0 = time.perf_counter()
+
     for item in spec:
         name = item["name"]
         params = item.get("params", {})
@@ -28,5 +33,24 @@ def run_pipeline(frame: ImageFrame, spec: List[Dict[str, Any]], registry: Dict[s
             raise ValueError(f"Unknown step: {name}")
 
         step = registry[name]
+
+        t_step0 = time.perf_counter()
         cur = step.run(cur, params)
-    return cur
+        t_step1 = time.perf_counter()
+
+        steps_report.append(
+            {
+                "name": name,
+                "params": params,
+                "time_sec": round(t_step1 - t_step0, 6),
+            }
+        )
+
+    total_time_sec = round(time.perf_counter() - t0, 6)
+
+    report = {
+        "steps": steps_report,
+        "total_time_sec": total_time_sec,
+    }
+
+    return cur, report
