@@ -65,6 +65,29 @@ def api_algorithms():
                 },
             },
         },
+        "unsharp_luma": {
+            "description": "Unsharp mask applied on luminance channel (YCrCb)",
+            "params": {
+                "amount": {
+                    "type": "float",
+                    "default": 1.0,
+                    "min": 0.0,
+                    "max": 5.0
+                },
+                "radius": {
+                    "type": "float",
+                    "default": 2.0,
+                    "min": 0.1,
+                    "max": 20.0
+                },
+                "threshold": {
+                    "type": "float",
+                    "default": 0.0,
+                    "min": 0.0,
+                    "max": 0.5
+                }
+            },
+        },
     }
 
 

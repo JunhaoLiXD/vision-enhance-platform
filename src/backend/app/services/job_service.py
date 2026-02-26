@@ -88,6 +88,7 @@ def create_job(file: UploadFile) -> Dict[str, Any]:
             {"name": "gamma", "params": {"gamma": 1.2}},
             {"name": "clahe", "params": {"clip_limit": 2.0, "tile_grid_size": [8, 8]}},
             {"name": "retinex_msr_luma", "params":{"sigmas": [15.0, 80.0, 250.0], "weights": None, "eps": 1e-6}},
+            {"name": "unsharp_luma", "params": {"amount": 1.0, "radius": 2.0, "threshold": 0.0}},
         ]
         out_frame, report = run_pipeline(frame, spec, registry)
 
