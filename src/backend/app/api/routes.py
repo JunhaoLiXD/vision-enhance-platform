@@ -88,6 +88,14 @@ def api_algorithms():
                 }
             },
         },
+        "bilateral_luma":{
+            "description": "Edge-preserving bilateral denoising applied on luminance channel (YCrCb). Reduces noise while maintaining sharp edges and structural details.",
+            "params":{
+                "d": -1,
+                "sigma_color": 0.08,
+                "sigma_space": 3.0
+            }
+        },
     }
 
 

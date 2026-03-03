@@ -19,8 +19,9 @@ from typing import Dict
 
 from src.backend.engine.plugins.enhance_classical.gamma import GammaStep
 from src.backend.engine.plugins.enhance_classical.clahe import CLAHEStep
-from src.backend.engine.plugins.enhance_classical.clahe import RetinexMSRLuminanceStep
-from src.backend.engine.plugins.enhance_classical.clahe import UnsharpMaskLuminanceStep
+from src.backend.engine.plugins.enhance_classical.retinex import RetinexMSRLuminanceStep
+from src.backend.engine.plugins.enhance_classical.unsharp_luma import UnsharpMaskLuminanceStep
+from src.backend.engine.plugins.enhance_classical.bilateral import BilateralLuminanceStep
 
 
 
@@ -31,4 +32,5 @@ def build_registry() -> Dict[str, object]:
         "clahe": CLAHEStep(),
         "retinex_msr_luma": RetinexMSRLuminanceStep(),
         "unsharp_luma": UnsharpMaskLuminanceStep(),
+        "bilateral_luma": BilateralLuminanceStep(),
     }
