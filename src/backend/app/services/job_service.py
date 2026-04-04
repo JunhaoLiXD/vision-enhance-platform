@@ -17,23 +17,27 @@ from __future__ import annotations
 import numpy as np
 from PIL import Image
 
-from src.backend.engine.core.image_frame import ImageFrame
-from src.backend.engine.core.pipeline import run_pipeline
-from src.backend.engine.plugins.enhance_classical.registry import build_registry
-
 import uuid
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 
 from fastapi import UploadFile
 
+from src.backend.engine.core.image_frame import ImageFrame
+from src.backend.engine.core.pipeline import run_pipeline
+from src.backend.engine.core.presets import get_preset_pipeline
+from src.backend.engine.plugins.enhance_classical.registry import build_registry
 from src.backend.app.storage.workspace import create_workspace, update_status, read_json, write_json
 
 
 WORKSPACES_DIR = Path("workspaces")
 
 
-def create_job(file: UploadFile) -> Dict[str, Any]:
+def create_job(
+    file: UploadFile,
+    preset_name: Optional[str] = None,
+    pipeline_spec: Optional[List[Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
     """
     Create a job workspace, save the uploaded input file, and write status.json.
     """
@@ -44,12 +48,28 @@ def create_job(file: UploadFile) -> Dict[str, Any]:
     filename = file.filename or "input.bin"
     input_path = ws.input_dir / filename
 
+    # Decide execution mode
+    if pipeline_spec is not None:
+        spec = pipeline_spec
+        mode = "custom"
+        selected_preset = None
+    elif preset_name is not None:
+        spec = get_preset_pipeline(preset_name)
+        mode = "preset"
+        selected_preset = preset_name
+    else:
+        selected_preset = "natural_enhance"
+        spec = get_preset_pipeline(selected_preset)
+        mode = "preset"
+
     # Mark job as created/uploading
     status = update_status(
         ws.status_path,
         {
             "status": "uploading",
             "input_filename": filename,
+            "mode": mode,
+            "preset": selected_preset,
         },
     )
 
@@ -74,6 +94,8 @@ def create_job(file: UploadFile) -> Dict[str, Any]:
             "status": "uploaded",
             "input_filename": filename,
             "input_path": str(input_path.as_posix()),
+            "mode": mode,
+            "preset": selected_preset,
         },
     )
 
@@ -84,12 +106,6 @@ def create_job(file: UploadFile) -> Dict[str, Any]:
         frame = ImageFrame(data=arr, meta={"mode": "RGB"})
         registry = build_registry()
 
-        spec = [
-            {"name": "gamma", "params": {"gamma": 1.2}},
-            {"name": "clahe", "params": {"clip_limit": 2.0, "tile_grid_size": [8, 8]}},
-            {"name": "retinex_msr_luma", "params":{"sigmas": [15.0, 80.0, 250.0], "weights": None, "eps": 1e-6}},
-            {"name": "unsharp_luma", "params": {"amount": 1.0, "radius": 2.0, "threshold": 0.0}},
-        ]
         out_frame, report = run_pipeline(frame, spec, registry)
 
         out_img = (np.clip(out_frame.data, 0.0, 1.0) * 255.0).astype(np.uint8)
@@ -101,6 +117,8 @@ def create_job(file: UploadFile) -> Dict[str, Any]:
 
         manifest = {
             "job_id": job_id,
+            "mode": mode,
+            "preset": selected_preset,
             "input": {
                 "filename": filename,
                 "path": str(input_path.as_posix()),
@@ -120,6 +138,8 @@ def create_job(file: UploadFile) -> Dict[str, Any]:
             ws.status_path,
             {
                 "status": "done",
+                "mode": mode,
+                "preset": selected_preset,
                 "output_filename": out_name,
                 "output_path": str(out_path.as_posix()),
                 "output_download_url": f"/api/jobs/{job_id}/download/{out_name}",
@@ -135,6 +155,8 @@ def create_job(file: UploadFile) -> Dict[str, Any]:
             ws.status_path,
             {
                 "status": "failed",
+                "mode": mode,
+                "preset": selected_preset,
                 "error": str(e),
             },
         )

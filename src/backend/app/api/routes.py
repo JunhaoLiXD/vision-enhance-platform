@@ -11,18 +11,36 @@ Notes:
 - Does NOT implement image processing logic.
 - Does NOT directly manage file system operations.
 """
-from fastapi import APIRouter, UploadFile, File
+import json
+from typing import Optional
+
+from fastapi import APIRouter, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from fastapi import HTTPException
 from pathlib import Path
 
 from src.backend.app.services.job_service import create_job, get_job_status
+from src.backend.engine.core.presets import list_presets
 
 router = APIRouter(prefix="/api")
 
 @router.post("/jobs")
-def api_create_job(file: UploadFile = File(...)):
-    return create_job(file)
+def api_create_job(
+    file: UploadFile = File(...),
+    preset_name: Optional[str] = Form(None),
+    pipeline_spec_json: Optional[str] = Form(None),
+):
+
+    pipeline_spec = None
+    
+    if pipeline_spec_json:
+        pipeline_spec = json.loads(pipeline_spec_json)
+
+    return create_job(
+        file=file,
+        preset_name=preset_name,
+        pipeline_spec=pipeline_spec,
+    )
 
 
 @router.get("/jobs/{job_id}")
@@ -127,3 +145,8 @@ def api_list_artifacts(job_id: str):
                 }
             )
     return {"job_id": job_id, "artifacts": sorted(files, key=lambda x: x["name"])}
+
+
+@router.get("/presets")
+def api_presets():
+    return list_presets()
