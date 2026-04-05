@@ -32,6 +32,20 @@ from src.backend.app.storage.workspace import create_workspace, update_status, r
 
 WORKSPACES_DIR = Path("workspaces")
 
+def _validate_pipeline_spec(pipeline_spec: List[Dict[str, Any]]) -> None:
+    if not isinstance(pipeline_spec, list) or len(pipeline_spec) == 0:
+        raise ValueError("pipeline_spec must be a non-empty list")
+
+    for i, step in enumerate(pipeline_spec):
+        if not isinstance(step, dict):
+            raise ValueError(f"pipeline_spec[{i}] must be a dict")
+        if "name" not in step:
+            raise ValueError(f"pipeline_spec[{i}] missing required field: name")
+        if not isinstance(step["name"], str):
+            raise ValueError(f"pipeline_spec[{i}].name must be a string")
+        if "params" in step and not isinstance(step["params"], dict):
+            raise ValueError(f"pipeline_spec[{i}].params must be a dict")
+
 
 def create_job(
     file: UploadFile,
@@ -48,19 +62,9 @@ def create_job(
     filename = file.filename or "input.bin"
     input_path = ws.input_dir / filename
 
-    # Decide execution mode
-    if pipeline_spec is not None:
-        spec = pipeline_spec
-        mode = "custom"
-        selected_preset = None
-    elif preset_name is not None:
-        spec = get_preset_pipeline(preset_name)
-        mode = "preset"
-        selected_preset = preset_name
-    else:
-        selected_preset = "natural_enhance"
-        spec = get_preset_pipeline(selected_preset)
-        mode = "preset"
+    mode = None
+    selected_preset = None
+    spec: List[Dict[str, Any]] = []
 
     # Mark job as created/uploading
     status = update_status(
@@ -100,6 +104,31 @@ def create_job(
     )
 
     try:
+        # Decide execution mode
+        if pipeline_spec is not None:
+            _validate_pipeline_spec(pipeline_spec)
+            spec = pipeline_spec
+            mode = "custom"
+            selected_preset = None
+        elif preset_name is not None:
+            spec = get_preset_pipeline(preset_name)
+            mode = "preset"
+            selected_preset = preset_name
+        else:
+            selected_preset = "natural_enhance"
+            spec = get_preset_pipeline(selected_preset)
+            mode = "preset"
+
+        status = update_status(
+            ws.status_path,
+            {
+                "status": "processing",
+                "mode": mode,
+                "preset": selected_preset,
+                "pipeline": spec,
+            },
+        )
+        
         img = Image.open(input_path).convert("RGB")
         arr = np.asarray(img).astype(np.float32) / 255.0  # normalize to [0,1]
 
@@ -108,6 +137,7 @@ def create_job(
 
         out_frame, report = run_pipeline(frame, spec, registry)
 
+        # Save output
         out_img = (np.clip(out_frame.data, 0.0, 1.0) * 255.0).astype(np.uint8)
         out_pil = Image.fromarray(out_img, mode="RGB")
 
@@ -134,6 +164,7 @@ def create_job(
 
         write_json(ws.manifest_path, manifest)
 
+        # Done
         status = update_status(
             ws.status_path,
             {
@@ -150,6 +181,18 @@ def create_job(
 
         return {"job_id": job_id, "status": status}
     
+    except ValueError:
+        status = update_status(
+            ws.status_path,
+            {
+                "status": "failed",
+                "mode": mode,
+                "preset": selected_preset,
+                "pipeline": spec,
+            },
+        )
+        raise
+    
     except Exception as e:
         status = update_status(
             ws.status_path,
@@ -157,6 +200,7 @@ def create_job(
                 "status": "failed",
                 "mode": mode,
                 "preset": selected_preset,
+                "pipeline": spec,
                 "error": str(e),
             },
         )

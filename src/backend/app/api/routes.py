@@ -12,6 +12,7 @@ Notes:
 - Does NOT directly manage file system operations.
 """
 import json
+from json import JSONDecodeError
 from typing import Optional
 
 from fastapi import APIRouter, UploadFile, File, Form
@@ -34,13 +35,21 @@ def api_create_job(
     pipeline_spec = None
     
     if pipeline_spec_json:
-        pipeline_spec = json.loads(pipeline_spec_json)
+        try:
+            pipeline_spec = json.loads(pipeline_spec_json)
+        except JSONDecodeError:
+            raise HTTPException(status_code=400, detail="Invalid pipeline_spec_json")
 
-    return create_job(
-        file=file,
-        preset_name=preset_name,
-        pipeline_spec=pipeline_spec,
-    )
+    try:
+        return create_job(
+            file=file,
+            preset_name=preset_name,
+            pipeline_spec=pipeline_spec,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal processing error: {str(e)}")
 
 
 @router.get("/jobs/{job_id}")
