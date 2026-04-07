@@ -28,7 +28,7 @@ router = APIRouter(prefix="/api")
 @router.post("/jobs")
 def api_create_job(
     file: UploadFile = File(...),
-    preset_name: Optional[str] = Form(None),
+    preset_id: Optional[str] = Form(None),
     pipeline_spec_json: Optional[str] = Form(None),
 ):
 
@@ -43,7 +43,7 @@ def api_create_job(
     try:
         return create_job(
             file=file,
-            preset_name=preset_name,
+            preset_id=preset_id,
             pipeline_spec=pipeline_spec,
         )
     except ValueError as e:
@@ -115,12 +115,27 @@ def api_algorithms():
                 }
             },
         },
-        "bilateral_luma":{
+        "bilateral_luma": {
             "description": "Edge-preserving bilateral denoising applied on luminance channel (YCrCb). Reduces noise while maintaining sharp edges and structural details.",
-            "params":{
-                "d": -1,
-                "sigma_color": 0.08,
-                "sigma_space": 3.0
+            "params": {
+                "d": {
+                    "type": "int",
+                    "default": -1,
+                    "min": -1,
+                    "max": 25
+                },
+                "sigma_color": {
+                    "type": "float",
+                    "default": 0.08,
+                    "min": 0.0,
+                    "max": 1.0
+                },
+                "sigma_space": {
+                    "type": "float",
+                    "default": 3.0,
+                    "min": 0.1,
+                    "max": 20.0
+                }
             }
         },
     }
@@ -158,4 +173,27 @@ def api_list_artifacts(job_id: str):
 
 @router.get("/presets")
 def api_presets():
-    return list_presets()
+    presets = list_presets()
+
+    return {
+        "presets": [
+            {
+                "id": "natural_enhance",
+                "name": "Natural Enhance",
+                "description": "Balanced enhancement for general photos.",
+                "steps": presets["natural_enhance"],
+            },
+            {
+                "id": "low_light_enhance",
+                "name": "Low Light Enhance",
+                "description": "Boost visibility in dim images.",
+                "steps": presets["low_light_enhance"],
+            },
+            {
+                "id": "detail_boost",
+                "name": "Detail Boost",
+                "description": "Increase local contrast and sharpen fine details.",
+                "steps": presets["detail_boost"],
+            },
+        ]
+    }

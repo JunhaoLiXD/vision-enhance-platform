@@ -49,7 +49,7 @@ def _validate_pipeline_spec(pipeline_spec: List[Dict[str, Any]]) -> None:
 
 def create_job(
     file: UploadFile,
-    preset_name: Optional[str] = None,
+    preset_id: Optional[str] = None,
     pipeline_spec: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """
@@ -110,10 +110,10 @@ def create_job(
             spec = pipeline_spec
             mode = "custom"
             selected_preset = None
-        elif preset_name is not None:
-            spec = get_preset_pipeline(preset_name)
+        elif preset_id is not None:
+            spec = get_preset_pipeline(preset_id)
             mode = "preset"
-            selected_preset = preset_name
+            selected_preset = preset_id
         else:
             selected_preset = "natural_enhance"
             spec = get_preset_pipeline(selected_preset)

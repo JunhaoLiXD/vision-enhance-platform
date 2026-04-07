@@ -8,6 +8,8 @@ import {
   getJobStatus,
   getJobArtifacts,
   buildDownloadUrl,
+  fetchPresets,
+  type PresetItem,
 } from "./services/api";
 
 export type JobStatus = "idle" | "uploading" | "processing" | "done" | "error";
@@ -23,6 +25,9 @@ export default function App() {
   const [downloadName, setDownloadName] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string>("");
 
+  const [presets, setPresets] = useState<PresetItem[]>([]);
+  const [selectedPresetId, setSelectedPresetId] = useState<string>("");
+
   useEffect(() => {
     return () => {
       if (previewUrl) {
@@ -30,6 +35,25 @@ export default function App() {
       }
     };
   }, [previewUrl]);
+
+  useEffect(() => {
+  const loadPresets = async () => {
+    try {
+      const presetList = await fetchPresets();
+      setPresets(presetList);
+
+      if (presetList.length > 0) {
+        setSelectedPresetId(presetList[0].id);
+      }
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to load presets."
+      );
+    }
+  };
+
+  loadPresets();
+}, []);
 
   const pollJobUntilComplete = async (currentJobId: string) => {
     try {
@@ -41,7 +65,7 @@ export default function App() {
         console.log("job status result:", statusResult);
 
         const status =
-          statusResult.status ?? statusResult.job_status ?? statusResult.state ?? "";
+          statusResult.status;
 
         if (status === "done" || status === "completed") {
           const artifactsResult = await getJobArtifacts(currentJobId);
@@ -101,7 +125,7 @@ export default function App() {
     setResultUrl("");
     setDownloadName("");
     setJobId("");
-    setJobStatus(file ? "idle" : "idle");
+    setJobStatus("idle");
 
     if (file) {
       const objectUrl = URL.createObjectURL(file);
@@ -125,11 +149,17 @@ export default function App() {
       setJobId("");
       setJobStatus("uploading");
 
-      const createResult = await createJob(selectedFile);
+      if(!selectedPresetId){
+        setErrorMessage("Please select a preset.");
+        setJobStatus("error");
+        return
+      }
+      
+      const createResult = await createJob(selectedFile, selectedPresetId);
       console.log("createJob result:", createResult);
 
       const newJobId =
-        createResult.job_id ?? createResult.id ?? createResult.jobId ?? "";
+        createResult.job_id;
 
       console.log("resolved job id:", newJobId);
 
@@ -201,6 +231,9 @@ export default function App() {
               selectedFile={selectedFile}
               jobStatus={jobStatus}
               errorMessage={errorMessage}
+              presets={presets}
+              selectedPresetId={selectedPresetId}
+              onPresetChange={setSelectedPresetId}
               onFileChange={handleFileChange}
               onStartProcess={handleStartProcess}
             />

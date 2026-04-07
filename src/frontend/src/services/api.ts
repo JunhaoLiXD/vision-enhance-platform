@@ -25,9 +25,43 @@ export type ArtifactsResponse = {
   files?: ArtifactItem[];
 };
 
-export async function createJob(file: File): Promise<CreateJobResponse> {
+export type PresetItem = {
+  id: string;
+  name: string;
+  description?: string;
+  steps?: Array<{
+    name: string;
+    params?: Record<string, unknown>;
+  }>;
+};
+
+export async function fetchPresets(): Promise<PresetItem[]> {
+  const response = await fetch(`${API_BASE_URL}/api/presets`);
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch presets.");
+  }
+
+  const data = await response.json();
+
+  if (Array.isArray(data.presets)) {
+    return data.presets;
+  }
+
+  return Object.keys(data).map((key) => ({
+    id: key,
+    name: key,
+    steps: data[key],
+  }));
+}
+
+export async function createJob(
+  file: File,
+  presetId: string
+): Promise<CreateJobResponse> {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("preset_id", presetId);
 
   const response = await fetch(`${API_BASE_URL}/api/jobs`, {
     method: "POST",
