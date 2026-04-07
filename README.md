@@ -2,124 +2,172 @@
 
 A local web-based image enhancement platform built with a **FastAPI backend** and a **React + TypeScript frontend**.
 
-This project is designed as an **engineering-oriented image processing system** rather than a single script or notebook. It uses a **plugin-style pipeline architecture** so that enhancement algorithms can be added, composed, and tested more easily. The current implementation focuses on classical image enhancement methods, while leaving room for future ML-based models and astronomy-specific extensions.
+This project is designed as an **engineering-oriented image processing system** rather than a single script or notebook. It uses a **plugin-based pipeline architecture** so that enhancement algorithms can be added, composed, and tested in a clean, extensible way.
 
-## Project Overview
+The current version supports both:
 
-The goal of this project is to build a production-style image enhancement platform that supports:
+- **Preset enhancement pipelines** for quick processing
+- **Custom single-algorithm configuration** with user-adjustable parameters
 
-* image upload and local processing
-* pipeline-based algorithm execution
-* downloadable enhancement results
-* a modular backend architecture for adding new algorithms
-* future support for presets, custom algorithm selection, ML models, and astronomy image workflows
+---
 
-At the current stage, the platform already supports the main local workflow:
+## Demo
 
-1. upload an image
-2. send it to the backend for processing
-3. generate an enhanced output
-4. preview the result in the frontend
-5. download the processed image to the local machine
+### Preset Enhancement Mode
 
-## Current Features
+Users can choose from predefined enhancement pipelines for common image improvement tasks.
 
-### Implemented
+![Preset Mode](assets/preset_mode.png)
 
-* FastAPI backend for image processing tasks
-* React + TypeScript frontend for local interaction
-* plugin/pipeline-style processing architecture
-* unified internal image processing workflow
-* local upload -> process -> preview -> download flow
-* workspace-based job/output management
-* manifest/log style support for tracking processing steps
-* several classical enhancement algorithms integrated into the backend
+### Custom Algorithm Mode
 
-### Available / Integrated Algorithms
+Users can select an individual algorithm, adjust its parameters, and apply it as a custom enhancement workflow.
 
-* Gamma Correction
-* CLAHE
-* Retinex
-* Bilateral Filter
-* Unsharp Mask
+![Custom Algorithm Mode](assets/custom_algorithm_mode.png)
 
-> Note: the exact set of enabled algorithms may depend on the current backend registry and API configuration.
 
-### In Progress / Planned
+---
 
-* preset selection from the UI
-* custom algorithm selection from the UI
-* richer job polling / status feedback in the frontend
-* ML-based enhancement models such as Zero-DCE or DnCNN
-* astronomy plugin extensions such as FITS input, calibration, and specialized stretch methods
+## Features
+
+### Current End-to-End Workflow
+
+- Upload an image from the local device
+- Select a preset pipeline or switch to custom algorithm mode
+- Send the processing request to the FastAPI backend
+- Run enhancement through a pipeline-based execution engine
+- Preview the processed result in the frontend
+- Download the final output locally
+
+### Preset Pipelines
+
+The frontend supports ready-to-use enhancement presets, including:
+
+- **Natural Enhance**
+- **Low Light Enhance**
+- **Detail Boost**
+
+These presets are backed by predefined pipeline specifications in the backend.
+
+### Custom Algorithm Mode
+
+Users can manually choose a single enhancement algorithm and provide parameter values through the frontend UI.
+
+Currently integrated algorithms include:
+
+- Gamma Correction
+- CLAHE
+- Retinex (MSR on luminance)
+- Bilateral Filter
+- Unsharp Mask
+
+### Backend Architecture
+
+The backend is built around a modular processing system with:
+
+- a unified internal image representation
+- a plugin/registry pattern for algorithms
+- declarative pipeline specifications
+- workspace-based job execution and output storage
+
+This design makes the project easier to extend with additional image enhancement methods, ML models, and domain-specific plugins in the future.
+
+---
 
 ## Tech Stack
 
 ### Backend
 
-* Python 3.11
-* FastAPI
-* Uvicorn
-* NumPy
-* OpenCV
-* Pillow
+- Python 3.11
+- FastAPI
+- Uvicorn
+- NumPy
+- OpenCV
+- Pillow
+- python-multipart
 
 ### Frontend
 
-* React
-* TypeScript
-* Vite
-* Tailwind CSS
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
+
+---
 
 ## Project Structure
 
-A typical project layout looks like this:
-
 ```text
 vision-enhance-platform/
-├── README.md
-├── requirements.txt
+├── assets/                     # README screenshots and static demo images
 ├── src/
 │   ├── backend/
 │   │   ├── app/
-│   │   ├── engine/
-│   │   └── ...
+│   │   │   ├── api/
+│   │   │   ├── services/
+│   │   │   ├── storage/
+│   │   │   └── main.py
+│   │   └── engine/
+│   │       ├── core/
+│   │       └── plugins/
 │   └── frontend/
-├── assets/
-├── sample_data/
-├── tests/
-└── docs/
+│       ├── src/
+│       │   ├── components/
+│       │   ├── services/
+│       │   ├── App.tsx
+│       │   └── main.tsx
+│       └── package.json
+├── workspaces/                 # generated job inputs/outputs/status files
+├── .gitignore
+├── LICENSE
+└── README.md
 ```
 
-Depending on your current implementation, the exact folders may differ slightly.
+---
 
 ## How It Works
 
 The platform follows an engineering-style processing flow:
 
-* the frontend sends an image or job request to the backend
-* the backend constructs or selects a processing pipeline
-* each pipeline step applies one enhancement operation
-* outputs are saved locally in the project workspace
-* the frontend displays the processed result
-* the user can download the final image
+1. The frontend uploads an image to the backend.
+2. The user either selects a **preset pipeline** or configures a **custom algorithm**.
+3. The backend constructs the execution pipeline.
+4. Each step processes the image through the registered plugin system.
+5. The output is saved into a local workspace.
+6. The frontend polls job status, previews the output, and enables downloading.
 
-This design makes it easier to:
+### Example Pipeline Specification
 
-* add new enhancement algorithms
-* test pipelines step by step
-* keep the backend extensible for future presets and ML models
+```json
+[
+  {
+    "name": "gamma",
+    "params": {
+      "gamma": 1.2
+    }
+  },
+  {
+    "name": "clahe",
+    "params": {
+      "clip_limit": 2.0,
+      "tile_grid_size": [8, 8]
+    }
+  }
+]
+```
+
+---
 
 ## Installation
 
-### 1. Clone the repository
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/JunhaoLiXD/vision-enhance-platform.git
 cd vision-enhance-platform
 ```
 
-### 2. Create and activate a Python environment
+### 2. Create and Activate a Python Environment
 
 Using **conda**:
 
@@ -146,58 +194,52 @@ On macOS / Linux:
 source .venv/bin/activate
 ```
 
-### 3. Install backend dependencies
+### 3. Install Backend Dependencies
 
-If you already have a `requirements.txt`, run:
+If you already maintain a `requirements.txt`, run:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-If your environment is still being assembled manually, make sure the backend has at least:
+Otherwise, install the minimum required packages manually:
 
 ```bash
 pip install fastapi uvicorn numpy opencv-python pillow python-multipart
 ```
 
-If your backend uses additional libraries, install those as needed.
-
-### 4. Install frontend dependencies
-
-Go to the frontend directory and install Node dependencies:
+### 4. Install Frontend Dependencies
 
 ```bash
 cd src/frontend
 npm install
 ```
 
-If your frontend is stored in a different directory, replace `src/frontend` with your actual frontend path.
+---
 
 ## Running the Project Locally
 
-Because this project is **not deployed to a public server yet**, it must currently be run **locally**.
+This project is currently intended for **local development and demonstration**.
 
-You need to start the backend and frontend separately.
+You need to run the backend and frontend separately.
 
-### Start the backend
+### Start the Backend
 
-From the project root, run something similar to:
+From the project root:
 
 ```bash
 uvicorn src.backend.app.main:app --reload
 ```
 
-If your FastAPI entry point is different, replace the module path with your actual one.
-
-A successful startup usually looks like this:
+A successful backend startup usually runs on:
 
 ```text
-Uvicorn running on http://127.0.0.1:8000
+http://127.0.0.1:8000
 ```
 
-### Start the frontend
+### Start the Frontend
 
-Open a second terminal and run:
+Open a second terminal:
 
 ```bash
 cd src/frontend
@@ -210,105 +252,88 @@ Vite will usually provide a local address such as:
 http://127.0.0.1:5173
 ```
 
-Open that address in your browser.
+Then open that address in your browser.
 
-## Typical Local Usage
+---
 
-After both services are running:
+## Typical Usage
 
-1. open the frontend in your browser
-2. upload an image
-3. let the frontend send the request to the backend
-4. wait for processing to complete
-5. preview the enhanced result
-6. click the download button to save the output locally
+1. Start the backend server.
+2. Start the frontend dev server.
+3. Open the web UI in the browser.
+4. Upload an image.
+5. Choose either:
+   - a preset pipeline, or
+   - a custom algorithm with manual parameters
+6. Start processing.
+7. Wait for the output preview.
+8. Download the enhanced result.
 
-## API Notes
+---
 
-The backend is designed around a job/pipeline style API. Depending on your current implementation, endpoints may include routes such as:
+## API Overview
 
-* `POST /api/jobs` — create a processing job
-* `GET /api/jobs/{id}` — query job status
-* `GET /api/jobs/{id}/artifacts` — list generated files
-* `GET /api/jobs/{id}/download/{name}` — download the result
-* `GET /api/algorithms` — list available processing algorithms
+The backend currently includes routes such as:
 
-The exact route names may vary slightly based on your current codebase.
+- `POST /api/jobs` — create a processing job
+- `GET /api/jobs/{id}` — query job status
+- `GET /api/jobs/{id}/artifacts` — list generated output files
+- `GET /api/jobs/{id}/download/{name}` — download an output image
+- `GET /api/presets` — list available preset pipelines
+- `GET /api/algorithms` — list available algorithms and parameter metadata
 
-## Current Limitations
+---
 
-At this stage:
+## Current Status
 
-* the platform is intended for **local development and testing**
-* it is **not deployed** as an online production service
-* UI support for **preset selection** is not fully finished yet
-* UI support for **manual algorithm selection** is not fully finished yet
-* some features described in the long-term roadmap are still under development
+### Implemented
 
-## Development Roadmap
+- FastAPI backend for image enhancement jobs
+- React + TypeScript frontend
+- Upload → process → preview → download workflow
+- Preset pipeline selection in the UI
+- Custom algorithm configuration panel in the UI
+- Dynamic parameter inputs for supported algorithms
+- Backend pipeline execution engine
+- Workspace-based output management
 
-### Phase 1
+### Planned / Future Work
 
-* pipeline core
-* basic backend API
-* minimal frontend
-* upload / process / download workflow
+- Multi-step custom pipeline builder
+- Drag-and-drop pipeline UI
+- ML-based enhancement models
+- Better validation and parameter controls
+- Docker support
+- Astronomy-specific extension plugins (FITS workflows, calibration, specialized stretch)
 
-### Phase 2
-
-* stronger enhancement depth
-* Retinex / denoise / sharpen integration
-* manifest and step logging
-* preset pipeline support
-
-### Phase 3
-
-* ML model integration
-* model caching and device selection
-* faster inference workflow
-
-### Phase 4
-
-* astronomy image extension
-* FITS support
-* calibration and stacking tools
-* astronomy-specific stretch operations
+---
 
 ## Why This Project
 
-This project is meant to demonstrate more than just image processing algorithms. It also shows:
+This project is intended to demonstrate more than just image processing algorithms. It also showcases:
 
-* backend service design
-* frontend/backend integration
-* modular software architecture
-* extensible plugin-style development
-* practical engineering workflow for computer vision applications
+- full-stack engineering with FastAPI and React
+- modular backend architecture
+- plugin-style extensibility
+- pipeline-based task execution
+- practical system design for computer vision applications
 
-It is especially suitable as a portfolio project for software engineering, computer vision, and ML-related internships.
+It is especially suitable as a portfolio project for software engineering, computer vision, and ML-related roles.
+
+---
 
 ## Recommended Environment
 
 For the smoothest local setup, use:
 
-* Python 3.11
-* Node.js 18+ (or a recent LTS version)
-* npm 9+
+- Python 3.11
+- Node.js 18+
+- npm 9+
 
-## Future Improvements
-
-Some useful future additions include:
-
-* better UI controls for choosing pipelines
-* side-by-side before/after comparison
-* real-time job status polling
-* Docker support
-* deployment to a cloud or VPS environment
-* batch image processing
-* ML enhancement inference
-* astronomy workflow plugins
+---
 
 ## Author
 
-**Junhao Li**
-Computer Science @ University of Florida
-Image Processing / Computer Vision / Software Engineering
+**Junhao Li**  
+Computer Science @ University of Florida  
+Interests: Computer Vision / Image Processing / Software Engineering
