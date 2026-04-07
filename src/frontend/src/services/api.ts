@@ -35,6 +35,20 @@ export type PresetItem = {
   }>;
 };
 
+export type AlgorithmParamSpec = {
+  type: string;
+  default: unknown;
+  min?: number;
+  max?: number;
+};
+
+export type AlgorithmItem = {
+  id: string;
+  name: string;
+  description?: string;
+  params: Record<string, AlgorithmParamSpec>;
+};
+
 export async function fetchPresets(): Promise<PresetItem[]> {
   const response = await fetch(`${API_BASE_URL}/api/presets`);
 
@@ -55,13 +69,42 @@ export async function fetchPresets(): Promise<PresetItem[]> {
   }));
 }
 
+export async function fetchAlgorithms(): Promise<AlgorithmItem[]> {
+  const response = await fetch(`${API_BASE_URL}/api/algorithms`);
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch algorithms.");
+  }
+
+  const data = await response.json();
+
+  return Object.keys(data).map((key) => ({
+    id: key,
+    name: key,
+    description: data[key].description,
+    params: data[key].params ?? {},
+  }));
+}
+
+type CreateJobOptions = {
+  presetId?: string;
+  pipelineSpecJson?: string;
+};
+
 export async function createJob(
   file: File,
-  presetId: string
+  options: CreateJobOptions
 ): Promise<CreateJobResponse> {
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("preset_id", presetId);
+
+  if (options.presetId){
+    formData.append("preset_id", options.presetId);
+  }
+
+  if (options.pipelineSpecJson){
+    formData.append("pipeline_spec_json", options.pipelineSpecJson);
+  }
 
   const response = await fetch(`${API_BASE_URL}/api/jobs`, {
     method: "POST",

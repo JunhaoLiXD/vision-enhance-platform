@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import UploadPanel from "./components/UploadPanel";
 import PreviewPanel from "./components/PreviewPanel";
 import DownloadPanel from "./components/DownloadPanel";
+import AlgorithmConfigPanel from "./components/AlgorithmConfigPanel";
 
 import {
   createJob,
@@ -9,7 +10,9 @@ import {
   getJobArtifacts,
   buildDownloadUrl,
   fetchPresets,
+  fetchAlgorithms,
   type PresetItem,
+  type AlgorithmItem,
 } from "./services/api";
 
 export type JobStatus = "idle" | "uploading" | "processing" | "done" | "error";
@@ -25,8 +28,14 @@ export default function App() {
   const [downloadName, setDownloadName] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string>("");
 
+  const [mode, setMode] = useState<"preset" | "custom">("preset");
+
   const [presets, setPresets] = useState<PresetItem[]>([]);
   const [selectedPresetId, setSelectedPresetId] = useState<string>("");
+
+  const [algorithms, setAlgorithms] = useState<AlgorithmItem[]>([]);
+  const [selectedAlgorithmId, setSelectedAlgorithmId] = useState<string>("");
+  const [algorithmParams, setAlgorithmParams] = useState<Record<string, unknown>>({});
 
   useEffect(() => {
     return () => {
@@ -37,23 +46,59 @@ export default function App() {
   }, [previewUrl]);
 
   useEffect(() => {
-  const loadPresets = async () => {
-    try {
-      const presetList = await fetchPresets();
-      setPresets(presetList);
+    const loadInitialData = async () => {
+      try {
+        const [presetList, algorithmList] = await Promise.all([
+          fetchPresets(),
+          fetchAlgorithms(),
+        ]);
 
-      if (presetList.length > 0) {
-        setSelectedPresetId(presetList[0].id);
+        setPresets(presetList);
+        if (presetList.length > 0) {
+          setSelectedPresetId(presetList[0].id);
+        }
+
+        setAlgorithms(algorithmList);
+        if (algorithmList.length > 0) {
+          const firstAlgorithm = algorithmList[0];
+          setSelectedAlgorithmId(firstAlgorithm.id);
+
+          const defaultParams: Record<string, unknown> = {};
+          Object.entries(firstAlgorithm.params).forEach(([paramName, spec]) => {
+            defaultParams[paramName] = spec.default;
+          });
+          setAlgorithmParams(defaultParams);
+        }
+      } catch (error) {
+        setErrorMessage(
+          error instanceof Error ? error.message : "Failed to load initial data."
+        );
       }
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "Failed to load presets."
-      );
-    }
+    };
+
+    loadInitialData();
+  }, []);
+
+  const handleAlgorithmChange = (algorithmId: string) => {
+    setSelectedAlgorithmId(algorithmId);
+
+    const selectedAlgorithm = algorithms.find((item) => item.id === algorithmId);
+    if (!selectedAlgorithm) return;
+
+    const defaultParams: Record<string, unknown> = {};
+    Object.entries(selectedAlgorithm.params).forEach(([paramName, spec]) => {
+      defaultParams[paramName] = spec.default;
+    });
+
+    setAlgorithmParams(defaultParams);
   };
 
-  loadPresets();
-}, []);
+  const handleParamChange = (paramName: string, value: unknown) => {
+    setAlgorithmParams((prev) => ({
+      ...prev,
+      [paramName]: value,
+    }));
+  };
 
   const pollJobUntilComplete = async (currentJobId: string) => {
     try {
@@ -62,14 +107,10 @@ export default function App() {
 
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
         const statusResult = await getJobStatus(currentJobId);
-        console.log("job status result:", statusResult);
-
-        const status =
-          statusResult.status;
+        const status = statusResult.status;
 
         if (status === "done" || status === "completed") {
           const artifactsResult = await getJobArtifacts(currentJobId);
-          console.log("artifacts result:", artifactsResult);
 
           const artifacts =
             artifactsResult.artifacts ??
@@ -90,8 +131,6 @@ export default function App() {
                 firstArtifact.filename ??
                 firstArtifact.file_name ??
                 "";
-
-          console.log("resolved artifact name:", artifactName);
 
           if (!artifactName) {
             throw new Error("Artifact exists, but no valid artifact filename was found.");
@@ -127,6 +166,10 @@ export default function App() {
     setJobId("");
     setJobStatus("idle");
 
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
     if (file) {
       const objectUrl = URL.createObjectURL(file);
       setPreviewUrl(objectUrl);
@@ -149,19 +192,38 @@ export default function App() {
       setJobId("");
       setJobStatus("uploading");
 
-      if(!selectedPresetId){
-        setErrorMessage("Please select a preset.");
-        setJobStatus("error");
-        return
+      let createResult;
+
+      if (mode === "preset") {
+        if (!selectedPresetId) {
+          setErrorMessage("Please select a preset.");
+          setJobStatus("error");
+          return;
+        }
+
+        createResult = await createJob(selectedFile, {
+          presetId: selectedPresetId,
+        });
+      } else {
+        if (!selectedAlgorithmId) {
+          setErrorMessage("Please select an algorithm.");
+          setJobStatus("error");
+          return;
+        }
+
+        const pipelineSpecJson = JSON.stringify([
+          {
+            name: selectedAlgorithmId,
+            params: algorithmParams,
+          },
+        ]);
+
+        createResult = await createJob(selectedFile, {
+          pipelineSpecJson,
+        });
       }
-      
-      const createResult = await createJob(selectedFile, selectedPresetId);
-      console.log("createJob result:", createResult);
 
-      const newJobId =
-        createResult.job_id;
-
-      console.log("resolved job id:", newJobId);
+      const newJobId = createResult.job_id;
 
       if (!newJobId) {
         throw new Error("Backend did not return a valid job id.");
@@ -233,6 +295,8 @@ export default function App() {
               errorMessage={errorMessage}
               presets={presets}
               selectedPresetId={selectedPresetId}
+              mode={mode}
+              onModeChange={setMode}
               onPresetChange={setSelectedPresetId}
               onFileChange={handleFileChange}
               onStartProcess={handleStartProcess}
@@ -245,13 +309,22 @@ export default function App() {
             />
           </div>
 
-          <div className="lg:col-span-8">
+          <div className="space-y-6 lg:col-span-8">
             <PreviewPanel
               previewUrl={previewUrl}
               resultUrl={resultUrl}
               jobStatus={jobStatus}
               errorMessage={errorMessage}
               jobId={jobId}
+            />
+
+            <AlgorithmConfigPanel
+              isCustomMode={mode === "custom"}
+              algorithms={algorithms}
+              selectedAlgorithmId={selectedAlgorithmId}
+              algorithmParams={algorithmParams}
+              onAlgorithmChange={handleAlgorithmChange}
+              onParamChange={handleParamChange}
             />
           </div>
         </main>
