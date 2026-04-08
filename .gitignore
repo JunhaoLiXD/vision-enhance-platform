@@ -3,11 +3,13 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+*.pyc
 
 # ===== Environments =====
 .venv/
 venv/
 .env/
+.env
 
 # ===== Conda =====
 .conda/
@@ -25,3 +27,7 @@ workspaces/
 
 # ===== Project guide =====
 image_enhancement_platform_project_guide.docx
+
+node_modules/
+dist/
+*.log
