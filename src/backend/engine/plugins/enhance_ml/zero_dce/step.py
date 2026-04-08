@@ -1,8 +1,7 @@
-# src/backend/engine/plugins/enhance_ml/zero_dce/step.py
-
 from __future__ import annotations
 
 from copy import deepcopy
+from threading import Lock
 from typing import Any, Dict
 
 from src.backend.app.services.model_manager import ModelManager
@@ -17,19 +16,21 @@ class ZeroDCEStep:
     """
 
     name = "zero_dce"
+    _run_lock = Lock()
 
     def __init__(self, model_manager: ModelManager | None = None) -> None:
         self.model_manager = model_manager or ModelManager()
 
     def run(self, frame: ImageFrame, params: Dict[str, Any] | None = None) -> ImageFrame:
         params = params or {}
-        device = params.get("device", "auto")
+        device = str(params.get("device", "cpu")).lower()
 
-        output_data, info = run_zero_dce(
-            frame=frame,
-            model_manager=self.model_manager,
-            device=device,
-        )
+        with self._run_lock:
+            output_data, info = run_zero_dce(
+                frame=frame,
+                model_manager=self.model_manager,
+                device=device,
+            )
 
         new_meta = deepcopy(getattr(frame, "meta", {}))
         new_history = deepcopy(getattr(frame, "history", []))

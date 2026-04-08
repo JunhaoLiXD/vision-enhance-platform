@@ -1,5 +1,3 @@
-# src/backend/engine/plugins/enhance_ml/zero_dce/network.py
-
 from __future__ import annotations
 
 import torch
@@ -10,12 +8,13 @@ class ZeroDCENet(nn.Module):
     """
     Zero-DCE network adapted from the original model code.
 
-    Important:
-    - Keep layer names e_conv1 ~ e_conv7 unchanged so the official
-      pretrained state_dict can still be loaded.
-    - forward() returns:
+    Notes:
+    - Keep layer names e_conv1 ~ e_conv7 unchanged so the pretrained
+      state_dict remains compatible.
+    - By default, forward() returns only the final enhanced image to
+      reduce inference memory usage.
+    - If return_aux=True, it returns:
         enhance_image_1, enhance_image, r
-      where `enhance_image` is the final enhanced output.
     """
 
     def __init__(self, num_features: int = 32) -> None:
@@ -31,9 +30,7 @@ class ZeroDCENet(nn.Module):
         self.e_conv6 = nn.Conv2d(num_features * 2, num_features, 3, 1, 1, bias=True)
         self.e_conv7 = nn.Conv2d(num_features * 2, 24, 3, 1, 1, bias=True)
 
-    def forward(
-        self, x: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor, return_aux: bool = False):
         x1 = self.relu(self.e_conv1(x))
         x2 = self.relu(self.e_conv2(x1))
         x3 = self.relu(self.e_conv3(x2))
@@ -55,6 +52,8 @@ class ZeroDCENet(nn.Module):
         x = x + r7 * (torch.pow(x, 2) - x)
         enhance_image = x + r8 * (torch.pow(x, 2) - x)
 
+        if not return_aux:
+            return enhance_image
+
         r = torch.cat([r1, r2, r3, r4, r5, r6, r7, r8], dim=1)
         return enhance_image_1, enhance_image, r
-    

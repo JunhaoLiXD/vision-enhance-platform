@@ -1,5 +1,3 @@
-# src/backend/app/services/model_manager.py
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -23,9 +21,6 @@ class ModelManager:
     def __init__(self) -> None:
         self._cache: Dict[Tuple[str, str], torch.nn.Module] = {}
 
-        # Current file:
-        # src/backend/app/services/model_manager.py
-        # Project root is 4 levels above "services"
         self.project_root = Path(__file__).resolve().parents[4]
         self.models_root = self.project_root / "models"
 
@@ -50,8 +45,6 @@ class ModelManager:
     def _load_state_dict(self, weights_path: Path, device: torch.device) -> dict:
         checkpoint = torch.load(weights_path, map_location=device)
 
-        # Some checkpoints may store the state dict directly,
-        # others may wrap it inside a dict.
         if isinstance(checkpoint, dict):
             for key in ("state_dict", "model_state_dict", "model"):
                 if key in checkpoint and isinstance(checkpoint[key], dict):
@@ -66,11 +59,11 @@ class ModelManager:
         resolved_device = self.resolve_device(device)
         cache_key = ("zero_dce", str(resolved_device))
 
+        weights_path = self.models_root / "zero_dce" / "Epoch99.pth"
+
         if cache_key in self._cache:
-            weights_path = self.models_root / "zero_dce" / "Epoch99.pth"
             return self._cache[cache_key], resolved_device, weights_path
 
-        weights_path = self.models_root / "zero_dce" / "Epoch99.pth"
         if not weights_path.exists():
             raise FileNotFoundError(
                 f"Zero-DCE weights not found: {weights_path}\n"
@@ -82,6 +75,9 @@ class ModelManager:
         model.load_state_dict(state_dict, strict=True)
         model.to(resolved_device)
         model.eval()
+
+        for param in model.parameters():
+            param.requires_grad_(False)
 
         self._cache[cache_key] = model
         return model, resolved_device, weights_path

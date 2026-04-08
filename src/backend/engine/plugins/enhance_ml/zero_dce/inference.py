@@ -1,7 +1,6 @@
-# src/backend/engine/plugins/enhance_ml/zero_dce/inference.py
-
 from __future__ import annotations
 
+import gc
 import time
 from typing import Any, Dict, Tuple
 
@@ -14,7 +13,7 @@ from .preprocess import imageframe_to_tensor, tensor_to_image
 def run_zero_dce(
     frame,
     model_manager,
-    device: str = "auto",
+    device: str = "cpu",
 ) -> Tuple[np.ndarray, Dict[str, Any]]:
     """
     Run Zero-DCE inference on an ImageFrame-like object.
@@ -23,6 +22,7 @@ def run_zero_dce(
     - frame.data is HWC image data
     - frame.data is RGB or convertible RGB
     """
+
     model, resolved_device, weights_path = model_manager.get_zero_dce(device=device)
 
     input_shape = tuple(frame.data.shape)
@@ -30,7 +30,7 @@ def run_zero_dce(
 
     start = time.perf_counter()
     with torch.inference_mode():
-        _, enhanced_tensor, _ = model(input_tensor)
+        enhanced_tensor = model(input_tensor)
     inference_ms = (time.perf_counter() - start) * 1000.0
 
     output_image = tensor_to_image(enhanced_tensor)
@@ -44,4 +44,12 @@ def run_zero_dce(
         "output_shape": output_shape,
         "inference_ms": round(inference_ms, 3),
     }
+
+    del input_tensor
+    del enhanced_tensor
+    gc.collect()
+
+    if resolved_device.type == "cuda":
+        torch.cuda.empty_cache()
+
     return output_image, info
