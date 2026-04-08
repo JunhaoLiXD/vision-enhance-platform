@@ -69,6 +69,10 @@ export default function App() {
           });
           setAlgorithmParams(defaultParams);
         }
+        else {
+          setSelectedAlgorithmId("");
+          setAlgorithmParams({});
+        }
       } catch (error) {
         setErrorMessage(
           error instanceof Error ? error.message : "Failed to load initial data."
