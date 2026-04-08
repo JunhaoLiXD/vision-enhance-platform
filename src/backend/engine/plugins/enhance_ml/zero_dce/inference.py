@@ -7,7 +7,14 @@ from typing import Any, Dict, Tuple
 import numpy as np
 import torch
 
-from .preprocess import imageframe_to_tensor, tensor_to_image
+from .preprocess import (
+    imageframe_to_tensor,
+    resize_longest_side,
+    restore_to_size,
+    tensor_to_image,
+)
+
+MAX_ZERO_DCE_SIDE = 384
 
 
 def run_zero_dce(
@@ -17,16 +24,16 @@ def run_zero_dce(
 ) -> Tuple[np.ndarray, Dict[str, Any]]:
     """
     Run Zero-DCE inference on an ImageFrame-like object.
-
-    Assumes:
-    - frame.data is HWC image data
-    - frame.data is RGB or convertible RGB
     """
 
     model, resolved_device, weights_path = model_manager.get_zero_dce(device=device)
 
-    input_shape = tuple(frame.data.shape)
-    input_tensor = imageframe_to_tensor(frame.data, resolved_device)
+    resized_input, original_hw, inference_hw, resized = resize_longest_side(
+        frame.data,
+        max_side=MAX_ZERO_DCE_SIDE,
+    )
+
+    input_tensor = imageframe_to_tensor(resized_input, resolved_device)
 
     start = time.perf_counter()
     with torch.inference_mode():
@@ -34,15 +41,22 @@ def run_zero_dce(
     inference_ms = (time.perf_counter() - start) * 1000.0
 
     output_image = tensor_to_image(enhanced_tensor)
+
+    if resized:
+        output_image = restore_to_size(output_image, original_hw)
+
     output_shape = tuple(output_image.shape)
 
     info = {
         "model": "Zero-DCE",
         "weights": weights_path.name,
         "device": str(resolved_device),
-        "input_shape": input_shape,
+        "input_shape": tuple(frame.data.shape),
+        "inference_shape": (int(inference_hw[0]), int(inference_hw[1]), 3),
         "output_shape": output_shape,
         "inference_ms": round(inference_ms, 3),
+        "resized_for_inference": resized,
+        "max_inference_side": MAX_ZERO_DCE_SIDE,
     }
 
     del input_tensor

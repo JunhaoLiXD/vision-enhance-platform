@@ -11,8 +11,7 @@ class ZeroDCENet(nn.Module):
     Notes:
     - Keep layer names e_conv1 ~ e_conv7 unchanged so the pretrained
       state_dict remains compatible.
-    - By default, forward() returns only the final enhanced image to
-      reduce inference memory usage.
+    - By default, forward() returns only the final enhanced image.
     - If return_aux=True, it returns:
         enhance_image_1, enhance_image, r
     """

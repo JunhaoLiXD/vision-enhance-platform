@@ -198,7 +198,7 @@ def api_presets():
             {
                 "id": "zero_dce_enhance",
                 "name": "Zero-DCE Enhance",
-                "description": "Low-light enhancement using the Zero-DCE neural model.",
+                "description": "Low-light enhancement using the Zero-DCE neural model. For the web demo, Zero-DCE resizes the image so the longest side is 384 px before inference.",
                 "steps": presets["zero_dce_enhance"],
             },
         ]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import cv2
 import numpy as np
 import torch
 
@@ -22,6 +23,53 @@ def ensure_rgb_float01(data: np.ndarray) -> np.ndarray:
     out = np.clip(out, 0.0, 1.0)
     out = np.ascontiguousarray(out)
     return out
+
+
+def resize_longest_side(
+    data: np.ndarray,
+    max_side: int,
+) -> tuple[np.ndarray, tuple[int, int], tuple[int, int], bool]:
+    """
+    Resize an image so that its longest side is at most max_side.
+
+    Returns:
+    - resized image
+    - original (height, width)
+    - resized (height, width)
+    - whether resizing happened
+    """
+    image = ensure_rgb_float01(data)
+
+    original_h, original_w = image.shape[:2]
+    longest_side = max(original_h, original_w)
+
+    if longest_side <= max_side:
+        return image, (original_h, original_w), (original_h, original_w), False
+
+    scale = max_side / float(longest_side)
+    new_w = max(1, int(round(original_w * scale)))
+    new_h = max(1, int(round(original_h * scale)))
+
+    resized = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
+    resized = np.ascontiguousarray(resized.astype(np.float32, copy=False))
+
+    return resized, (original_h, original_w), (new_h, new_w), True
+
+
+def restore_to_size(data: np.ndarray, target_hw: tuple[int, int]) -> np.ndarray:
+    """
+    Resize an image back to the target size.
+    """
+    image = ensure_rgb_float01(data)
+    target_h, target_w = target_hw
+    current_h, current_w = image.shape[:2]
+
+    if (current_h, current_w) == (target_h, target_w):
+        return image
+
+    restored = cv2.resize(image, (target_w, target_h), interpolation=cv2.INTER_LINEAR)
+    restored = np.ascontiguousarray(restored.astype(np.float32, copy=False))
+    return restored
 
 
 def imageframe_to_tensor(data: np.ndarray, device: torch.device) -> torch.Tensor:
@@ -52,4 +100,5 @@ def tensor_to_image(tensor: torch.Tensor) -> np.ndarray:
 
     image = image.permute(1, 2, 0).numpy()
     image = np.clip(image, 0.0, 1.0).astype(np.float32, copy=False)
+    image = np.ascontiguousarray(image)
     return image
