@@ -1,0 +1,60 @@
+# src/backend/engine/plugins/enhance_ml/zero_dce/network.py
+
+from __future__ import annotations
+
+import torch
+import torch.nn as nn
+
+
+class ZeroDCENet(nn.Module):
+    """
+    Zero-DCE network adapted from the original model code.
+
+    Important:
+    - Keep layer names e_conv1 ~ e_conv7 unchanged so the official
+      pretrained state_dict can still be loaded.
+    - forward() returns:
+        enhance_image_1, enhance_image, r
+      where `enhance_image` is the final enhanced output.
+    """
+
+    def __init__(self, num_features: int = 32) -> None:
+        super().__init__()
+
+        self.relu = nn.ReLU(inplace=True)
+
+        self.e_conv1 = nn.Conv2d(3, num_features, 3, 1, 1, bias=True)
+        self.e_conv2 = nn.Conv2d(num_features, num_features, 3, 1, 1, bias=True)
+        self.e_conv3 = nn.Conv2d(num_features, num_features, 3, 1, 1, bias=True)
+        self.e_conv4 = nn.Conv2d(num_features, num_features, 3, 1, 1, bias=True)
+        self.e_conv5 = nn.Conv2d(num_features * 2, num_features, 3, 1, 1, bias=True)
+        self.e_conv6 = nn.Conv2d(num_features * 2, num_features, 3, 1, 1, bias=True)
+        self.e_conv7 = nn.Conv2d(num_features * 2, 24, 3, 1, 1, bias=True)
+
+    def forward(
+        self, x: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        x1 = self.relu(self.e_conv1(x))
+        x2 = self.relu(self.e_conv2(x1))
+        x3 = self.relu(self.e_conv3(x2))
+        x4 = self.relu(self.e_conv4(x3))
+
+        x5 = self.relu(self.e_conv5(torch.cat([x3, x4], dim=1)))
+        x6 = self.relu(self.e_conv6(torch.cat([x2, x5], dim=1)))
+
+        x_r = torch.tanh(self.e_conv7(torch.cat([x1, x6], dim=1)))
+        r1, r2, r3, r4, r5, r6, r7, r8 = torch.split(x_r, 3, dim=1)
+
+        x = x + r1 * (torch.pow(x, 2) - x)
+        x = x + r2 * (torch.pow(x, 2) - x)
+        x = x + r3 * (torch.pow(x, 2) - x)
+        enhance_image_1 = x + r4 * (torch.pow(x, 2) - x)
+
+        x = enhance_image_1 + r5 * (torch.pow(enhance_image_1, 2) - enhance_image_1)
+        x = x + r6 * (torch.pow(x, 2) - x)
+        x = x + r7 * (torch.pow(x, 2) - x)
+        enhance_image = x + r8 * (torch.pow(x, 2) - x)
+
+        r = torch.cat([r1, r2, r3, r4, r5, r6, r7, r8], dim=1)
+        return enhance_image_1, enhance_image, r
+    
