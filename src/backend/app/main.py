@@ -20,6 +20,7 @@ app = FastAPI(title="Vision Enhance Platform", version="0.1.0")
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "https://vision-enhance-platform.vercel.app"
 ]
 
 app.add_middleware(
