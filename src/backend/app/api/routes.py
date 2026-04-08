@@ -195,5 +195,11 @@ def api_presets():
                 "description": "Increase local contrast and sharpen fine details.",
                 "steps": presets["detail_boost"],
             },
+            {
+                "id": "zero_dce_enhance",
+                "name": "Zero-DCE Enhance",
+                "description": "Low-light enhancement using the Zero-DCE neural model.",
+                "steps": presets["zero_dce_enhance"],
+            },
         ]
     }

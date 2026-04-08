@@ -122,6 +122,15 @@ PRESET_PIPELINES: Dict[str, List[Dict[str, Any]]] = {
             },
         },
     ],
+
+    "zero_dce_enhance": [
+        {
+            "name": "zero_dce",
+            "params": {
+                "device": "auto",
+            },
+        },
+    ],
 }
 
 

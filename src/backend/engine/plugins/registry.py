@@ -1,21 +1,17 @@
 """
-Plugin registry for classical enhancement algorithms.
+Global plugin registry for enhancement algorithms.
 
 Responsibilities:
-- Map algorithm names (strings) to their corresponding Step implementations.
-- Provide a centralized lookup mechanism for the pipeline.
-- Enable plugin-based extensibility without modifying pipeline logic.
+- Map algorithm names to their Step implementations.
+- Provide a single registry for classical, ML, and future astronomy plugins.
+- Keep pipeline execution independent from plugin category layout.
 
-Current registrations:
-- "gamma" -> GammaStep
-- "clahe" -> CLAHEStep
-
-Notes:
-- Adding new algorithms requires registration here.
 """
 from __future__ import annotations
 
 from typing import Dict
+
+from src.backend.app.services.model_manager import ModelManager
 
 from src.backend.engine.plugins.enhance_classical.gamma import GammaStep
 from src.backend.engine.plugins.enhance_classical.clahe import CLAHEStep
@@ -23,14 +19,18 @@ from src.backend.engine.plugins.enhance_classical.retinex import RetinexMSRLumin
 from src.backend.engine.plugins.enhance_classical.unsharp_luma import UnsharpMaskLuminanceStep
 from src.backend.engine.plugins.enhance_classical.bilateral import BilateralLuminanceStep
 
-
+from src.backend.engine.plugins.enhance_ml.zero_dce.step import ZeroDCEStep
 
 def build_registry() -> Dict[str, object]:
-    # Later will add CLAHE, Retinex, etc.
+    model_manager = ModelManager()
+
     return {
         "gamma": GammaStep(),
         "clahe": CLAHEStep(),
         "retinex_msr_luma": RetinexMSRLuminanceStep(),
         "unsharp_luma": UnsharpMaskLuminanceStep(),
         "bilateral_luma": BilateralLuminanceStep(),
+
+        # ML
+        "zero_dce": ZeroDCEStep(model_manager=model_manager)
     }

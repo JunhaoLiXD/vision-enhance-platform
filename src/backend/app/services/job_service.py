@@ -26,7 +26,7 @@ from fastapi import UploadFile
 from src.backend.engine.core.image_frame import ImageFrame
 from src.backend.engine.core.pipeline import run_pipeline
 from src.backend.engine.core.presets import get_preset_pipeline
-from src.backend.engine.plugins.enhance_classical.registry import build_registry
+from src.backend.engine.plugins.registry import build_registry
 from src.backend.app.storage.workspace import create_workspace, update_status, read_json, write_json
 
 
@@ -160,6 +160,7 @@ def create_job(
             },
             "pipeline": spec,
             "timing": report,  # report = {"steps":[...], "total_time_sec": ...}
+            "history": getattr(out_frame, "history", [])
         }
 
         write_json(ws.manifest_path, manifest)
