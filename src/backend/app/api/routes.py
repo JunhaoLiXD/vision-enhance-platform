@@ -15,25 +15,27 @@ import json
 from json import JSONDecodeError
 from typing import Optional
 
-from fastapi import APIRouter, UploadFile, File, Form
+from fastapi import APIRouter, UploadFile, File, Form, BackgroundTasks
 from fastapi.responses import FileResponse
 from fastapi import HTTPException
 from pathlib import Path
 
 from src.backend.app.services.job_service import create_job, get_job_status
 from src.backend.engine.core.presets import list_presets
+from src.backend.engine.plugins.registry import get_algorithms_schema
 
 router = APIRouter(prefix="/api")
 
 @router.post("/jobs")
 def api_create_job(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     preset_id: Optional[str] = Form(None),
     pipeline_spec_json: Optional[str] = Form(None),
 ):
 
     pipeline_spec = None
-    
+
     if pipeline_spec_json:
         try:
             pipeline_spec = json.loads(pipeline_spec_json)
@@ -43,6 +45,7 @@ def api_create_job(
     try:
         return create_job(
             file=file,
+            background_tasks=background_tasks,
             preset_id=preset_id,
             pipeline_spec=pipeline_spec,
         )
@@ -59,86 +62,7 @@ def api_get_job(job_id: str):
 
 @router.get("/algorithms")
 def api_algorithms():
-    return {
-        "gamma": {
-            "description": "Gamma correction on normalized RGB",
-            "params": {
-                "gamma": {"type": "float", "default": 1.2, "min": 0.1, "max": 5.0}
-            },
-        },
-        "clahe": {
-            "description": "CLAHE on luminance channel (LAB)",
-            "params": {
-                "clip_limit": {"type": "float", "default": 2.0, "min": 0.1, "max": 10.0},
-                "tile_grid_size": {"type": "list[int,int]", "default": [8, 8]},
-            },
-        },
-        "retinex_msr_luma":{
-            "description": "Multi-scale Retinex applied on luminance channel (YCrCb)",
-            "params": {
-                "sigmas": {
-                    "type": "list[float]",
-                    "default": [15.0, 80.0, 250.0]
-                },
-                "weights": {
-                    "type": "list[float]",
-                    "default": None
-                },
-                "eps": {
-                    "type": "float",
-                    "default": 1e-6,
-                    "min": 1e-8,
-                    "max": 1e-2
-                },
-            },
-        },
-        "unsharp_luma": {
-            "description": "Unsharp mask applied on luminance channel (YCrCb)",
-            "params": {
-                "amount": {
-                    "type": "float",
-                    "default": 1.0,
-                    "min": 0.0,
-                    "max": 5.0
-                },
-                "radius": {
-                    "type": "float",
-                    "default": 2.0,
-                    "min": 0.1,
-                    "max": 20.0
-                },
-                "threshold": {
-                    "type": "float",
-                    "default": 0.0,
-                    "min": 0.0,
-                    "max": 0.5
-                }
-            },
-        },
-        "bilateral_luma": {
-            "description": "Edge-preserving bilateral denoising applied on luminance channel (YCrCb). Reduces noise while maintaining sharp edges and structural details.",
-            "params": {
-                "d": {
-                    "type": "int",
-                    "default": -1,
-                    "min": -1,
-                    "max": 25
-                },
-                "sigma_color": {
-                    "type": "float",
-                    "default": 0.08,
-                    "min": 0.0,
-                    "max": 1.0
-                },
-                "sigma_space": {
-                    "type": "float",
-                    "default": 3.0,
-                    "min": 0.1,
-                    "max": 20.0
-                }
-            }
-        },
-    }
+    return get_algorithms_schema()
 
 
 @router.get("/jobs/{job_id}/download/{name}")

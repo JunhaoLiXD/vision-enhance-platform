@@ -22,6 +22,12 @@ from src.backend.engine.core.image_frame import ImageFrame
 
 class UnsharpMaskLuminanceStep:
     name = "unsharp_luma"
+    description = "Unsharp mask applied on luminance channel (YCrCb)"
+    params_schema = {
+        "amount": {"type": "float", "default": 1.0, "min": 0.0, "max": 5.0},
+        "radius": {"type": "float", "default": 2.0, "min": 0.1, "max": 20.0},
+        "threshold": {"type": "float", "default": 0.0, "min": 0.0, "max": 0.5},
+    }
 
     def run(self, frame: ImageFrame, params: Dict[str, Any]) -> ImageFrame:
         # amount controls how strongly edges/details are boosted

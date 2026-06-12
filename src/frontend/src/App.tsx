@@ -17,6 +17,12 @@ import {
 
 export type JobStatus = "idle" | "uploading" | "processing" | "done" | "error";
 
+export type PipelineStep = {
+  stepId: string;
+  algorithmId: string;
+  params: Record<string, unknown>;
+};
+
 export default function App() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
@@ -34,14 +40,12 @@ export default function App() {
   const [selectedPresetId, setSelectedPresetId] = useState<string>("");
 
   const [algorithms, setAlgorithms] = useState<AlgorithmItem[]>([]);
-  const [selectedAlgorithmId, setSelectedAlgorithmId] = useState<string>("");
-  const [algorithmParams, setAlgorithmParams] = useState<Record<string, unknown>>({});
+
+  const [customSteps, setCustomSteps] = useState<PipelineStep[]>([]);
 
   useEffect(() => {
     return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
 
@@ -54,25 +58,9 @@ export default function App() {
         ]);
 
         setPresets(presetList);
-        if (presetList.length > 0) {
-          setSelectedPresetId(presetList[0].id);
-        }
+        if (presetList.length > 0) setSelectedPresetId(presetList[0].id);
 
         setAlgorithms(algorithmList);
-        if (algorithmList.length > 0) {
-          const firstAlgorithm = algorithmList[0];
-          setSelectedAlgorithmId(firstAlgorithm.id);
-
-          const defaultParams: Record<string, unknown> = {};
-          Object.entries(firstAlgorithm.params).forEach(([paramName, spec]) => {
-            defaultParams[paramName] = spec.default;
-          });
-          setAlgorithmParams(defaultParams);
-        }
-        else {
-          setSelectedAlgorithmId("");
-          setAlgorithmParams({});
-        }
       } catch (error) {
         setErrorMessage(
           error instanceof Error ? error.message : "Failed to load initial data."
@@ -83,26 +71,44 @@ export default function App() {
     loadInitialData();
   }, []);
 
-  const handleAlgorithmChange = (algorithmId: string) => {
-    setSelectedAlgorithmId(algorithmId);
+  // ── Custom pipeline step handlers ──────────────────────────────────────
 
-    const selectedAlgorithm = algorithms.find((item) => item.id === algorithmId);
-    if (!selectedAlgorithm) return;
-
-    const defaultParams: Record<string, unknown> = {};
-    Object.entries(selectedAlgorithm.params).forEach(([paramName, spec]) => {
-      defaultParams[paramName] = spec.default;
-    });
-
-    setAlgorithmParams(defaultParams);
-  };
-
-  const handleParamChange = (paramName: string, value: unknown) => {
-    setAlgorithmParams((prev) => ({
+  const handleAddStep = (algorithmId: string, params: Record<string, unknown>) => {
+    setCustomSteps((prev) => [
       ...prev,
-      [paramName]: value,
-    }));
+      {
+        stepId: `step-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        algorithmId,
+        params,
+      },
+    ]);
   };
+
+  const handleRemoveStep = (stepId: string) => {
+    setCustomSteps((prev) => prev.filter((s) => s.stepId !== stepId));
+  };
+
+  const handleUpdateStepParam = (stepId: string, paramName: string, value: unknown) => {
+    setCustomSteps((prev) =>
+      prev.map((s) =>
+        s.stepId === stepId ? { ...s, params: { ...s.params, [paramName]: value } } : s
+      )
+    );
+  };
+
+  const handleMoveStep = (stepId: string, direction: "up" | "down") => {
+    setCustomSteps((prev) => {
+      const index = prev.findIndex((s) => s.stepId === stepId);
+      if (index === -1) return prev;
+      const swapIndex = direction === "up" ? index - 1 : index + 1;
+      if (swapIndex < 0 || swapIndex >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+      return next;
+    });
+  };
+
+  // ── Job lifecycle ──────────────────────────────────────────────────────
 
   const pollJobUntilComplete = async (currentJobId: string) => {
     try {
@@ -170,13 +176,10 @@ export default function App() {
     setJobId("");
     setJobStatus("idle");
 
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-    }
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
 
     if (file) {
-      const objectUrl = URL.createObjectURL(file);
-      setPreviewUrl(objectUrl);
+      setPreviewUrl(URL.createObjectURL(file));
     } else {
       setPreviewUrl("");
     }
@@ -205,26 +208,19 @@ export default function App() {
           return;
         }
 
-        createResult = await createJob(selectedFile, {
-          presetId: selectedPresetId,
-        });
+        createResult = await createJob(selectedFile, { presetId: selectedPresetId });
       } else {
-        if (!selectedAlgorithmId) {
-          setErrorMessage("Please select an algorithm.");
+        if (customSteps.length === 0) {
+          setErrorMessage("Please add at least one step to the pipeline.");
           setJobStatus("error");
           return;
         }
 
-        const pipelineSpecJson = JSON.stringify([
-          {
-            name: selectedAlgorithmId,
-            params: algorithmParams,
-          },
-        ]);
+        const pipelineSpecJson = JSON.stringify(
+          customSteps.map((step) => ({ name: step.algorithmId, params: step.params }))
+        );
 
-        createResult = await createJob(selectedFile, {
-          pipelineSpecJson,
-        });
+        createResult = await createJob(selectedFile, { pipelineSpecJson });
       }
 
       const newJobId = createResult.job_id;
@@ -251,9 +247,7 @@ export default function App() {
     try {
       const response = await fetch(resultUrl);
 
-      if (!response.ok) {
-        throw new Error("Failed to download the result file.");
-      }
+      if (!response.ok) throw new Error("Failed to download the result file.");
 
       const blob = await response.blob();
       const blobUrl = URL.createObjectURL(blob);
@@ -325,10 +319,11 @@ export default function App() {
             <AlgorithmConfigPanel
               isCustomMode={mode === "custom"}
               algorithms={algorithms}
-              selectedAlgorithmId={selectedAlgorithmId}
-              algorithmParams={algorithmParams}
-              onAlgorithmChange={handleAlgorithmChange}
-              onParamChange={handleParamChange}
+              customSteps={customSteps}
+              onAddStep={handleAddStep}
+              onRemoveStep={handleRemoveStep}
+              onUpdateStepParam={handleUpdateStepParam}
+              onMoveStep={handleMoveStep}
             />
           </div>
         </main>

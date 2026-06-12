@@ -22,6 +22,11 @@ from src.backend.engine.core.image_frame import ImageFrame
 
 class CLAHEStep:
     name = "clahe"
+    description = "CLAHE on luminance channel (LAB)"
+    params_schema = {
+        "clip_limit": {"type": "float", "default": 2.0, "min": 0.1, "max": 10.0},
+        "tile_grid_size": {"type": "list[int,int]", "default": [8, 8]},
+    }
 
     def run(self, frame: ImageFrame, params: Dict[str, Any]) -> ImageFrame:
         """
