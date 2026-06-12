@@ -19,6 +19,10 @@ from src.backend.engine.core.image_frame import ImageFrame
 
 class GammaStep:
     name = "gamma"
+    description = "Gamma correction on normalized RGB"
+    params_schema = {
+        "gamma": {"type": "float", "default": 1.2, "min": 0.1, "max": 5.0},
+    }
 
     def run(self, frame: ImageFrame, params: Dict[str, Any]) -> ImageFrame:
         gamma = float(params.get("gamma", 1.2))

@@ -30,4 +30,21 @@ image_enhancement_platform_project_guide.docx
 
 node_modules/
 dist/
+build/
 *.log
+
+# ===== Test cache =====
+.pytest_cache/
+.mypy_cache/
+
+# ===== Model weights (large binaries) =====
+*.pth
+*.pt
+*.ckpt
+
+# ===== Local dev overrides =====
+*.local
+
+# ===== Claude Code =====
+.claude/
+CLAUDE.md

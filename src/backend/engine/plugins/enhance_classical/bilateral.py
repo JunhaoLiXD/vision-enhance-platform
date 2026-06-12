@@ -23,6 +23,12 @@ from src.backend.engine.core.image_frame import ImageFrame
 
 class BilateralLuminanceStep:
     name = "bilateral_luma"
+    description = "Edge-preserving bilateral denoising applied on luminance channel (YCrCb). Reduces noise while maintaining sharp edges and structural details."
+    params_schema = {
+        "d": {"type": "int", "default": -1, "min": -1, "max": 25},
+        "sigma_color": {"type": "float", "default": 0.08, "min": 0.0, "max": 1.0},
+        "sigma_space": {"type": "float", "default": 3.0, "min": 0.1, "max": 20.0},
+    }
 
     def run(self, frame: ImageFrame, params: Dict[str, Any]) -> ImageFrame:
         # d: Diameter of each pixel neighborhood used during filtering.
