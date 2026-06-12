@@ -13,7 +13,7 @@ The current version supports:
 
 ## Live Demo
 
-> **Frontend:** <!-- TODO: add Vercel URL -->
+> **Frontend:** https://vision-enhance-platform.vercel.app/
 >
 > The backend is hosted on Render.com (free tier). The first request after a period of inactivity may take 30–60 seconds due to cold start. Subsequent requests respond normally.
 
